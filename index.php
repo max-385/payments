@@ -6,63 +6,74 @@
     <title>Payments</title>
 </head>
 
-
 <body>
 <table border="1">
-    <?php $query = "SELECT payment_id, export_id, count(id) as count, sum(sum) as sum FROM data GROUP BY export_id";
-    $data = mysqli_query($dbc, $query);
-    while ($res = mysqli_fetch_assoc($data)) { ?>
-        <tr>
-            <th> payment_id</th>
-            <th> count</th>
-            <th> export_id</th>
-            <th> total</th>
-        </tr>
-        <?php
-        $q = "SELECT payment_id, export_id, count(id) as count, sum(sum) as total FROM data WHERE export_id = '$res[export_id]' GROUP BY payment_id";
-        $d = mysqli_query($dbc, $q);
+    <?php
+    include_once("functions/queryFunctions.php");
 
-        while ($r = mysqli_fetch_assoc($d)) { ?>
-            <tr style="text-align: right">
-                <td><?php echo $r['payment_id']; ?></td>
-                <td><?php echo $r['count']; ?></td>
-                <td><?php echo $r['export_id']; ?></td>
-                <td><?php echo $r['total']; ?></td>
+    $groupedData = getGroupedData($dbc);
+    $paymentsDetails = getDescriptionData($dbc);
+    $footerCount = 0;
+    $footerSum = 0;
+
+    foreach ($groupedData as $key => $mainRow) {
+        $footerCount += $mainRow['count'];
+        $footerSum += $mainRow['total'];
+        if (!isset($groupedData[$key - 1]['export_id']) ||
+            $groupedData[$key - 1]['export_id'] !== $groupedData[$key]['export_id']) { ?>
+            <tr>
+                <th> payment_id</th>
+                <th> count</th>
+                <th> export_id</th>
+                <th> total</th>
             </tr>
-            <?php if ($r['count'] > 1) { ?>
-                <tr>
-                    <th colspan='2'></th>
-                    <th> ID</th>
-                    <th> sum</th>
+        <?php } ?>
+
+        <tr style="text-align: right">
+            <td> <?php echo $mainRow['payment_id']; ?></td>
+            <td> <?php echo $mainRow['count']; ?></td>
+            <td> <?php echo $mainRow['export_id']; ?></td>
+            <td> <?php echo $mainRow['total']; ?></td>
+        </tr>
+
+        <?php if ($mainRow['count'] > 1) { ?>
+            <tr>
+                <th colspan='2'></th>
+                <th> ID</th>
+                <th> sum</th>
+            </tr>
+            <?php foreach ($paymentsDetails[$mainRow['payment_id']] as $description) { ?>
+                <tr style="text-align: right">
+                    <td colspan="2"></td>
+                    <td><?php echo $description['id']; ?></td>
+                    <td><?php echo $description['sum']; ?></td>
                 </tr>
-                <?php $q2 = "SELECT id, sum FROM data WHERE payment_id = '$r[payment_id]'";
-                $d2 = mysqli_query($dbc, $q2);
-                while ($res2 = mysqli_fetch_assoc($d2)) { ?>
-                    <tr style="text-align: right">
-                        <td colspan="2"></td>
-                        <td><?php echo $res2['id']; ?></td>
-                        <td><?php echo $res2['sum']; ?></td>
-                    </tr>
-                <?php } ?>
             <?php } ?>
         <?php } ?>
 
-        <tr style="text-align: center">
-            <td colspan="4"> Total for export <?php echo $res['export_id']; ?></td>
-        </tr>
-        <tr style="text-align: center">
-            <td colspan="2">count</td>
-            <td colspan="2">sum</td>
-        </tr>
-        <tr style="text-align: center">
-            <td colspan="2"><?php echo $res['count'] ?></td>
-            <td colspan="2"><?php echo $res['sum'] ?></td>
-        </tr>
-        <tr>
-            <td colspan="4">&nbsp;</td>
-        </tr>
+        <?php
+        if (!isset($groupedData[$key + 1]['export_id']) ||
+            $groupedData[$key]['export_id'] !== $groupedData[$key + 1]['export_id']) { ?>
+            <tr style="text-align: center">
+                <td colspan="4"> Total for export <?php echo $mainRow['export_id']; ?></td>
+            </tr>
+            <tr style="text-align: center">
+                <td colspan="2">count</td>
+                <td colspan="2">sum</td>
+            </tr>
+            <tr style="text-align: center">
+                <td colspan="2"><?php echo $footerCount ?></td>
+                <td colspan="2"><?php echo $footerSum ?></td>
+            </tr>
+            <tr>
+                <td colspan="4">&nbsp;</td>
+            </tr>
 
+            <?php $footerCount = 0;
+            $footerSum = 0;
+        } ?>
     <?php } ?>
+
 </table>
 </body>
 </html>
